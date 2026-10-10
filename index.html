@@ -33,6 +33,16 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
 @media(max-width:360px){header{gap:6px}.brand{font-size:16px;letter-spacing:-.6px}.pill{font-size:9px}.intro h1{font-size:22px}.card{padding:10px}.toolbar button{font-size:11px;padding:8px 4px}.pageinfo{font-size:11px}.row{gap:6px}.row button{font-size:12px}.upload input[type=file]{font-size:11px}}
 @media(min-width:901px) and (max-width:1050px){.layout{grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr)}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}button{transition:none}}
+
+.text-settings{margin:12px 0 16px;border:1px solid var(--line);border-radius:11px;background:#fbfcff;overflow:hidden}
+.text-settings summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px;font-weight:700;color:var(--ink);user-select:none}
+.text-settings summary::-webkit-details-marker{display:none}
+.text-settings summary::after{content:'+';font-size:22px;line-height:1;color:var(--blue);font-weight:500;flex-shrink:0}
+.text-settings[open] summary::after{content:'−'}
+.settings-subtitle{font-size:11px;color:var(--muted);font-weight:400;text-align:right}
+.settings-content{padding:0 13px 13px;border-top:1px solid var(--line)}
+.settings-content>label:first-child{margin-top:12px}
+
 </style>
 </head>
 <body>
@@ -55,30 +65,36 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
         <div id="empty" class="empty">Upload a PDF to see its pages here.</div>
         <div id="pageWrap"><canvas id="pdfCanvas"></canvas><div id="marker"></div></div>
       </div>
-      <div class="status" id="status" role="status"></div>
+
     </section>
     <aside>
       <section class="card">
         <h2>2. Set name position</h2>
         <label for="investorName">Name</label>
         <input id="investorName" type="text" placeholder="e.g. Rahul Mehta" autocomplete="off">
-        <label for="scriptMode">Typing / language option</label>
-        <select id="scriptMode">
-          <option value="english" selected>English only</option>
-          <option value="gu-translit">Gujarati (type using English letters)</option>
-          <option value="gu-direct">Gujarati text (type/paste Gujarati)</option>
-        </select>
-        <p class="help" id="languageHelp">Choose a language first, then type the name. Gujarati mode converts each word when you press Space.</p>
-        <div class="row">
-          <div><label for="fontSize">Font size (pt)</label><input id="fontSize" type="number" min="6" max="60" value="18"></div>
-          <div><label for="fontColor">Text color</label><input id="fontColor" type="color" value="#202020" style="width:100%;height:39px;margin-top:5px;border:1px solid #d6deeb;border-radius:9px;background:#fff;padding:3px"></div>
-        </div>
-        <label for="fontWeight">Text weight</label>
-        <select id="fontWeight">
-          <option value="regular">Regular</option>
-          <option value="bold">Bold</option>
-        </select>
-        <p class="help">Gujarati typing conversion and Gujarati PDF font require an internet connection.</p>
+        <details class="text-settings">
+          <summary>Typing & text settings <span class="settings-subtitle">Language, size, color, weight</span></summary>
+          <div class="settings-content">
+            <label for="scriptMode">Typing / language option</label>
+            <select id="scriptMode">
+              <option value="english" selected>English only</option>
+              <option value="gu-translit">Gujarati (type using English letters)</option>
+              <option value="gu-direct">Gujarati text (type/paste Gujarati)</option>
+            </select>
+            <p class="help" id="languageHelp" hidden></p>
+            <div class="row">
+              <div><label for="fontSize">Font size (pt)</label><input id="fontSize" type="number" min="6" max="60" value="18"></div>
+              <div><label for="fontColor">Text color</label><input id="fontColor" type="color" value="#202020" style="width:100%;height:39px;margin-top:5px;border:1px solid #d6deeb;border-radius:9px;background:#fff;padding:3px"></div>
+            </div>
+            <label for="fontWeight">Text weight</label>
+            <select id="fontWeight">
+              <option value="regular">Regular</option>
+              <option value="semibold">Light bold / Semi-bold</option>
+              <option value="bold">Bold</option>
+            </select>
+            <p class="help">Gujarati typing conversion and Gujarati PDF font require an internet connection.</p>
+          </div>
+        </details>
         <label for="pageSelect">Place name on page</label>
         <select id="pageSelect" disabled><option>Upload a PDF first</option></select>
         <p class="help">Set the position once. After the name appears on the preview, drag it to adjust the location. The position is remembered for this PDF in this browser.</p>
@@ -89,7 +105,7 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
         </div>
         <button id="generate" class="primary" style="width:100%;margin-top:16px" disabled>Generate & download PDF</button>
         <button id="share" class="dark" style="width:100%;margin-top:8px" disabled>Share / send latest PDF</button>
-        <div class="status" id="exportStatus" role="status"></div>
+
       </section>
       <section class="card history">
         <h2>Export history <span id="exportCount" class="pill">0 exports</span></h2>
@@ -110,8 +126,8 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
   let settingPosition=false, renderTask=null, transliterationTimer=null, transliterationRequest=0, renderSequence=0, isRendering=false;
   if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-  function status(msg){$('status').textContent=msg}
-  function exportStatus(msg){$('exportStatus').textContent=msg}
+  function status(msg){const el=$('status');if(el)el.textContent=msg}
+  function exportStatus(msg){const el=$('exportStatus');if(el)el.textContent=msg}
   function settingsKey(){return pdfFingerprint ? 'pdfPersonalizer.settings.'+pdfFingerprint : ''}
   function saveSettings(){
     if(!pdfFingerprint)return;
@@ -145,11 +161,8 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
   }
   function updateLanguageHelp(){
     const mode=$('scriptMode').value;
-    $('languageHelp').textContent=mode==='english'
-      ?'English only: type the name normally.'
-      :mode==='gu-translit'
-      ?'Gujarati typing: type a word using English letters, then press Space to convert it into Gujarati in this same field.'
-      :'Gujarati text: type or paste Gujarati letters directly.';
+    const help=$('languageHelp');
+    if(help){help.textContent=mode==='english'?'':'Gujarati mode selected.';help.hidden=true;}
     showMarker();
   }
   async function toGujarati(text){
@@ -225,7 +238,7 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
     if(!placement||placement.page!==currentPage){$('marker').style.display='none';return}
     const rect=canvas.getBoundingClientRect();
     const x=placement.x*rect.width, y=(1-placement.y)*rect.height;
-    const marker=$('marker');marker.textContent=$('investorName').value.trim()||'Name';
+    const marker=$('marker');marker.textContent=$('investorName').value.trim()||'Investor Name';
     marker.style.left=x+'px';marker.style.top=y+'px';marker.style.display='block';
     marker.style.fontSize=Math.max(10,Number($('fontSize').value)||18)+'px';
     marker.style.color=$('fontColor').value;
@@ -350,8 +363,10 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
     }
     const bytes=await out.save();
     const blob=new Blob([bytes],{type:'application/pdf'});
-    const safe=name.normalize('NFKD').replace(/[^a-zA-Z0-9_-]+/g,'_').replace(/^_+|_+$/g,'')||'Investor';
-    return {blob,name,filename:`Investment_Proposal_${safe}.pdf`};
+    const originalFileName=(fileInput.files&&fileInput.files[0]&&fileInput.files[0].name)||'document.pdf';
+    const baseName=originalFileName.replace(/\.pdf$/i,'').trim()||'document';
+    const safeBase=baseName.replace(/[\\/:*?"<>|]+/g,'_').replace(/\s+/g,' ').trim();
+    return {blob,name,filename:`${safeBase}.pdf`};
   }
   function recordExport(name,filename){
     exports.unshift({name,filename,time:new Date().toLocaleString()});
