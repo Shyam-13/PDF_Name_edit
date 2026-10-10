@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF Personalizer</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#172033;--muted:#687386;--blue:#315efb;--line:#e1e7f0;--green:#16845b;--radius:16px}
+*{box-sizing:border-box}
+html{min-width:280px;scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Arial,Helvetica,sans-serif;overflow-wrap:anywhere}
+header{background:#fff;border-bottom:1px solid var(--line);padding:16px clamp(14px,3vw,30px);display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:68px}
+.brand{font-size:clamp(18px,2vw,22px);font-weight:800;letter-spacing:-.4px;white-space:nowrap}.brand span{color:var(--blue)}
+.pill{display:inline-block;font-size:12px;background:#eef2ff;color:#315efb;padding:5px 9px;border-radius:99px;white-space:nowrap}
+main{width:min(1200px,100%);margin:clamp(16px,3vw,30px) auto;padding:0 clamp(12px,2.2vw,24px)}
+.intro{margin-bottom:clamp(16px,2vw,22px)}.intro h1{margin:0 0 6px;font-size:clamp(23px,3vw,32px);line-height:1.2;letter-spacing:-.8px}.intro p{margin:0;color:var(--muted);max-width:720px}
+.layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(290px,.8fr);gap:clamp(12px,1.8vw,20px);align-items:start}
+.layout>*,aside{min-width:0}.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:clamp(13px,1.8vw,20px);box-shadow:0 5px 22px #23365b08;min-width:0}.card h2{font-size:clamp(16px,1.5vw,18px);line-height:1.3;margin:0 0 14px}
+.upload{border:1.5px dashed #aab8d1;border-radius:12px;padding:clamp(12px,2vw,20px);text-align:center;background:#fafcff}.upload p{margin:7px 0 0;color:var(--muted);font-size:13px}
+input,select,button{font:inherit;max-width:100%}input[type=file]{display:block;width:100%;font-size:13px;min-width:0}input[type=text],input[type=number],select{width:100%;min-width:0;padding:11px;border:1px solid #d6deeb;border-radius:9px;background:#fff;color:var(--ink);margin-top:5px}
+input:focus,select:focus,button:focus-visible{outline:3px solid #315efb38;outline-offset:2px}
+input[type=color]{width:100%;height:42px;margin-top:5px;border:1px solid #d6deeb;border-radius:9px;background:#fff;padding:3px}
+label{display:block;font-weight:700;font-size:13px;margin:13px 0 0}small,.help{color:var(--muted);font-size:12px}
+button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:pointer;background:#edf1f8;color:#25324a;min-height:42px;touch-action:manipulation;transition:filter .15s,transform .15s}button:hover:not(:disabled){filter:brightness(.97)}button:active:not(:disabled){transform:translateY(1px)}button:disabled{opacity:.45;cursor:not-allowed}.primary{background:var(--blue);color:#fff}.dark{background:#172033;color:#fff}
+.row{display:flex;gap:9px;align-items:flex-end}.row>*{flex:1;min-width:0}.toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px;margin:14px 0}.toolbar button{padding:9px 10px;font-size:13px}.toolbar button:last-child{text-align:center}.pageinfo{font-size:13px;color:var(--muted);text-align:center;white-space:nowrap}
+.preview-shell{background:#edf1f7;border-radius:12px;padding:clamp(6px,1.5vw,14px);min-height:280px;display:flex;justify-content:center;align-items:flex-start;overflow:auto;overscroll-behavior:contain;width:100%}
+#pageWrap{position:relative;display:none;line-height:0;box-shadow:0 3px 12px #14213d22;background:white;max-width:100%;flex:0 0 auto}
+#pdfCanvas{display:block;max-width:100%;height:auto}
+#marker{position:absolute;display:none;line-height:1.2;border:1px dashed #315efb;background:#315efb20;color:#173bbd;padding:2px 4px;white-space:nowrap;transform:translateY(-100%);pointer-events:none;max-width:100%;overflow:hidden}
+.empty{color:var(--muted);text-align:center;padding:clamp(28px,5vw,48px) 12px;font-size:14px}.status{font-size:12px;color:var(--muted);margin-top:12px;min-height:18px;overflow-wrap:anywhere}.history{margin-top:18px}.history-item{border-top:1px solid var(--line);padding:11px 0;display:flex;justify-content:space-between;gap:10px;font-size:13px}.history-item span{color:var(--muted);display:block}.notice{font-size:12px;background:#fff8e7;border:1px solid #f5df9b;padding:10px;border-radius:9px;color:#765b15;margin-top:14px}footer{text-align:center;padding:22px 14px;color:var(--muted);font-size:12px}
+@media(max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}aside{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}.history{margin-top:0}}
+@media(max-width:600px){header{padding:13px 14px;min-height:60px}.brand{font-size:18px}.pill{font-size:10px;padding:5px 7px}main{margin:18px auto;padding:0 10px}.intro{padding:0 3px;margin-bottom:15px}.intro h1{font-size:24px}.intro p{font-size:14px}.layout{gap:12px}.card{padding:13px;border-radius:13px}.card h2{margin-bottom:12px}.upload{padding:12px 10px}.upload p{font-size:12px}.toolbar{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:5px}.toolbar button{font-size:12px;padding:9px 6px;min-height:40px}.pageinfo{font-size:12px}.preview-shell{min-height:180px;padding:5px}.row{gap:8px}.row button{padding:10px 7px;font-size:13px}#generate,#share{font-size:14px}aside{grid-template-columns:1fr;gap:12px}.history{margin-top:0}.empty{padding:32px 8px;font-size:13px}footer{padding:18px 12px}}
+@media(max-width:360px){header{gap:6px}.brand{font-size:16px;letter-spacing:-.6px}.pill{font-size:9px}.intro h1{font-size:22px}.card{padding:10px}.toolbar button{font-size:11px;padding:8px 4px}.pageinfo{font-size:11px}.row{gap:6px}.row button{font-size:12px}.upload input[type=file]{font-size:11px}}
+@media(min-width:901px) and (max-width:1050px){.layout{grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr)}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}button{transition:none}}
+</style>
+</head>
+<body>
+<header><div class="brand">PDF <span>Personalizer</span></div><div class="pill">Static browser tool</div></header>
+<main>
+  <section class="intro"><h1>Personalize your PDF</h1><p>Upload a PDF, choose where the investor name should appear, then export a separate copy.</p></section>
+  <div class="layout">
+    <section class="card">
+      <h2>1. Upload & preview</h2>
+      <div class="upload">
+        <input id="pdfFile" type="file" accept="application/pdf,.pdf">
+        <p>Your PDF stays in this browser; it is not uploaded to a server.</p>
+      </div>
+      <div class="toolbar">
+        <button id="prevPage" disabled>← Previous</button>
+        <div id="pageInfo" class="pageinfo">No PDF loaded</div>
+        <button id="nextPage" disabled>Next →</button>
+      </div>
+      <div class="preview-shell">
+        <div id="empty" class="empty">Upload a PDF to see its pages here.</div>
+        <div id="pageWrap"><canvas id="pdfCanvas"></canvas><div id="marker"></div></div>
+      </div>
+      <div class="status" id="status" role="status"></div>
+    </section>
+    <aside>
+      <section class="card">
+        <h2>2. Set name position</h2>
+        <label for="investorName">Name</label>
+        <input id="investorName" type="text" placeholder="e.g. Rahul Mehta" autocomplete="off">
+        <label for="scriptMode">Typing / language option</label>
+        <select id="scriptMode">
+          <option value="english" selected>English only</option>
+          <option value="gu-translit">Gujarati (type using English letters)</option>
+          <option value="gu-direct">Gujarati text (type/paste Gujarati)</option>
+        </select>
+        <p class="help" id="languageHelp">Choose a language first, then type the name. Gujarati mode converts each word when you press Space.</p>
+        <div class="row">
+          <div><label for="fontSize">Font size (pt)</label><input id="fontSize" type="number" min="6" max="60" value="18"></div>
+          <div><label for="fontColor">Text color</label><input id="fontColor" type="color" value="#202020" style="width:100%;height:39px;margin-top:5px;border:1px solid #d6deeb;border-radius:9px;background:#fff;padding:3px"></div>
+        </div>
+        <label for="fontWeight">Text weight</label>
+        <select id="fontWeight">
+          <option value="regular">Regular</option>
+          <option value="semibold">Light bold / Semi-bold</option>
+          <option value="bold">Bold</option>
+        </select>
+        <p class="help">Gujarati typing conversion and Gujarati PDF font require an internet connection.</p>
+        <label for="pageSelect">Place name on page</label>
+        <select id="pageSelect" disabled><option>Upload a PDF first</option></select>
+        <p class="help">Select a page and click the preview once to set the name position. It is remembered for this exact PDF in this browser, so you do not need to set it again.</p>
+        <div class="row" style="margin-top:14px">
+          <button id="setPosition" disabled>Set position</button>
+          <button id="clearPosition" disabled>Clear position</button>
+        </div>
+        <button id="generate" class="primary" style="width:100%;margin-top:16px" disabled>Generate & download PDF</button>
+        <button id="share" class="dark" style="width:100%;margin-top:8px" disabled>Share / send latest PDF</button>
+        <div class="status" id="exportStatus" role="status"></div>
+      </section>
+      <section class="card history">
+        <h2>Export history <span id="exportCount" class="pill">0 exports</span></h2>
+        <div id="historyList" class="help">Your generated files will appear here while this page stays open.</div>
+      </section>
+    </aside>
+  </div>
+</main>
+<footer>Static tool • No account or server required • Keep your original PDF as a backup</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const fileInput=$('pdfFile'), canvas=$('pdfCanvas'), ctx=canvas.getContext('2d');
+  let originalBytes=null, pdfDoc=null, currentPage=1, totalPages=0, placement=null, latestBlob=null, latestName='', exports=[], pdfFingerprint='';
+  let settingPosition=false, renderTask=null, transliterationTimer=null, transliterationRequest=0, renderSequence=0, isRendering=false;
+  if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  function status(msg){$('status').textContent=msg}
+  function exportStatus(msg){$('exportStatus').textContent=msg}
+  function settingsKey(){return pdfFingerprint ? 'pdfPersonalizer.settings.'+pdfFingerprint : ''}
+  function saveSettings(){
+    if(!pdfFingerprint)return;
+    const data={placement,fontSize:$('fontSize').value,fontColor:$('fontColor').value,fontWeight:$('fontWeight').value,scriptMode:$('scriptMode').value};
+    try{localStorage.setItem(settingsKey(),JSON.stringify(data));status('Position and text settings saved in this browser for this PDF.')}
+    catch(e){status('Could not save settings. Your browser storage may be full or disabled.')}
+  }
+  function restoreSettings(){
+    if(!pdfFingerprint)return false;
+    try{
+      const raw=localStorage.getItem(settingsKey());if(!raw)return false;
+      const data=JSON.parse(raw);
+      placement=data.placement||null;
+      if(data.fontSize)$('fontSize').value=data.fontSize;
+      if(data.fontColor)$('fontColor').value=data.fontColor;
+      if(data.fontWeight)$('fontWeight').value=data.fontWeight;
+      if(data.scriptMode)$('scriptMode').value=data.scriptMode;
+      updateLanguageHelp();return true;
+    }catch(e){return false}
+  }
+  async function fingerprintFile(bytes){
+    if(window.crypto && crypto.subtle){
+      const digest=await crypto.subtle.digest('SHA-256',bytes.slice(0));
+      return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+    // Fallback for local file previews where SubtleCrypto may be unavailable.
+    let hash=2166136261;
+    const view=new Uint8Array(bytes);
+    for(let i=0;i<view.length;i++){hash^=view[i];hash=Math.imul(hash,16777619)}
+    return 'fnv-'+(hash>>>0).toString(16)+'-'+view.length;
+  }
+  function updateLanguageHelp(){
+    const mode=$('scriptMode').value;
+    $('languageHelp').textContent=mode==='english'
+      ?'English only: type the name normally.'
+      :mode==='gu-translit'
+      ?'Gujarati typing: type a word using English letters, then press Space to convert it into Gujarati in this same field.'
+      :'Gujarati text: type or paste Gujarati letters directly.';
+    showMarker();
+  }
+  async function toGujarati(text){
+    // Google Input Tools converts phonetic English typing to Gujarati.
+    const url='https://inputtools.google.com/request?text='+encodeURIComponent(text)+'&itc=gu-t-i0-und&num=5&cp=0&cs=1&ie=utf-8&oe=utf-8';
+    let response;
+    try { response=await fetch(url,{method:'GET',mode:'cors'}); }
+    catch(e){ throw new Error('Gujarati conversion service could not be reached. Try Gujarati text mode and paste Gujarati, or check browser/network restrictions.'); }
+    if(!response.ok)throw new Error('Gujarati conversion service returned an error. Try again or paste Gujarati text directly.');
+    const data=await response.json();
+    const candidates=data && data[0]==='SUCCESS' && data[1] && data[1][0] && data[1][0][1];
+    if(!Array.isArray(candidates)||!candidates.length)throw new Error('No Gujarati conversion suggestion was returned. Try typing a simpler word or use Gujarati text mode.');
+    return candidates[0];
+  }
+  async function embedGujaratiTextAsImage(out,text,size,colorHex){
+    // pdf-lib does not shape Indic scripts consistently; browser canvas shapes Gujarati,
+    // so rasterize just the name and embed it as a transparent PNG in the PDF.
+    const scale=3, canvasText=document.createElement('canvas'), c=canvasText.getContext('2d');
+    const fontPx=size*scale;
+    c.font=`${$('fontWeight').value==='regular'?'400':$('fontWeight').value==='semibold'?'600':'700'} ${fontPx}px "Nirmala UI", "Noto Sans Gujarati", "Shruti", sans-serif`;
+    const metrics=c.measureText(text);
+    const pad=Math.ceil(fontPx*0.25);
+    canvasText.width=Math.max(1,Math.ceil(metrics.width+pad*2));
+    canvasText.height=Math.max(1,Math.ceil(fontPx*1.65));
+    const cc=canvasText.getContext('2d');
+    cc.font=c.font; cc.textBaseline='alphabetic'; cc.fillStyle=colorHex;
+    cc.fillText(text,pad,fontPx*1.15);
+    const png=await out.embedPng(canvasText.toDataURL('image/png'));
+    return {image:png,width:canvasText.width/scale,height:canvasText.height/scale};
+  }
+  function updateButtons(){
+    $('prevPage').disabled=!pdfDoc||currentPage<=1||isRendering;
+    $('nextPage').disabled=!pdfDoc||currentPage>=totalPages||isRendering;
+    $('pageSelect').disabled=!pdfDoc;
+    $('setPosition').disabled=!pdfDoc;
+    $('clearPosition').disabled=!placement;
+    $('generate').disabled=!pdfDoc||!placement||!$('investorName').value.trim();
+    $('share').disabled=!pdfDoc||!placement||!$('investorName').value.trim();
+  }
+  function updatePageInfo(){ $('pageInfo').textContent=pdfDoc?`Page ${currentPage} of ${totalPages}`:'No PDF loaded'; $('pageSelect').value=String(currentPage); }
+  async function renderPage(n){
+    if(!pdfDoc||!totalPages)return;
+    // Clamp navigation so rapid clicks can never produce page 0, negative pages, or pages beyond the PDF.
+    n=Math.max(1,Math.min(totalPages,Math.round(Number(n)||1)));
+    const sequence=++renderSequence;
+    currentPage=n; isRendering=true; updateButtons(); updatePageInfo();
+    try{
+      if(renderTask){try{renderTask.cancel()}catch(e){}}
+      const page=await pdfDoc.getPage(n);
+      if(sequence!==renderSequence)return;
+      const shell=$('pageWrap').parentElement;
+      const base=page.getViewport({scale:1});
+      const maxWidth=Math.max(240,Math.min(shell.clientWidth-18,780));
+      const scale=Math.min(maxWidth/base.width,1.6);
+      const viewport=page.getViewport({scale});
+      const dpr=window.devicePixelRatio||1;
+      canvas.width=Math.floor(viewport.width*dpr);canvas.height=Math.floor(viewport.height*dpr);
+      canvas.style.width=viewport.width+'px';canvas.style.height=viewport.height+'px';
+      $('pageWrap').style.width=viewport.width+'px';$('pageWrap').style.height=viewport.height+'px';
+      $('pageWrap').style.display='block';$('empty').style.display='none';
+      const transform=dpr!==1?[dpr,0,0,dpr,0,0]:null;
+      renderTask=page.render({canvasContext:ctx,viewport,transform});
+      await renderTask.promise;
+      if(sequence!==renderSequence)return;
+      if(placement&&placement.page===n)showMarker();else $('marker').style.display='none';
+      status(settingPosition?'Click the preview to place the investor name.':'');
+    }catch(e){if(e&&e.name!=='RenderingCancelledException'&&sequence===renderSequence)status('Could not render this page. Try another PDF.')}
+    finally{
+      if(sequence===renderSequence){isRendering=false;renderTask=null;updateButtons();updatePageInfo();}
+    }
+  }
+  function showMarker(){
+    if(!placement||placement.page!==currentPage){$('marker').style.display='none';return}
+    const rect=canvas.getBoundingClientRect();
+    const x=placement.x*rect.width, y=(1-placement.y)*rect.height;
+    const marker=$('marker');marker.textContent=$('investorName').value.trim()||'Investor Name';
+    marker.style.left=x+'px';marker.style.top=y+'px';marker.style.display='block';
+    marker.style.fontSize=Math.max(10,Number($('fontSize').value)||18)+'px';
+    marker.style.color=$('fontColor').value;
+    marker.style.fontWeight=$('fontWeight').value==='regular'?'400':$('fontWeight').value==='semibold'?'600':'700';
+  }
+  fileInput.addEventListener('change',async e=>{
+    const file=e.target.files&&e.target.files[0];if(!file)return;
+    if(file.type!=='application/pdf'&&!file.name.toLowerCase().endsWith('.pdf')){status('Please choose a PDF file.');return}
+    try{
+      status('Loading PDF…');exportStatus('');originalBytes=await file.arrayBuffer();
+      pdfDoc=await pdfjsLib.getDocument({data:originalBytes.slice(0)}).promise;
+      totalPages=pdfDoc.numPages;currentPage=1;placement=null;latestBlob=null;
+      pdfFingerprint=await fingerprintFile(originalBytes);
+      const restored=restoreSettings();
+      $('pageSelect').innerHTML='';
+      for(let i=1;i<=totalPages;i++){const op=document.createElement('option');op.value=String(i);op.textContent=`Page ${i}`;$('pageSelect').appendChild(op)}
+      updateButtons();await renderPage(1);
+      if(restored){if(placement&&placement.page>totalPages){placement=null}status(`Loaded ${file.name}. Saved position ${placement?'restored':'not found'} for this PDF.`)}
+      else status(`Loaded ${file.name} (${totalPages} pages). Set the name position once; it will be saved for this exact PDF.`);
+      updateButtons();
+    }catch(err){pdfDoc=null;originalBytes=null;status('Unable to open this PDF. It may be protected or invalid.')}
+  });
+  $('prevPage').addEventListener('click',()=>renderPage(currentPage-1));
+  $('nextPage').addEventListener('click',()=>renderPage(currentPage+1));
+  $('pageSelect').addEventListener('change',e=>renderPage(Number(e.target.value)));
+  $('setPosition').addEventListener('click',()=>{if(!pdfDoc)return;settingPosition=true;status('Click the preview to place the name.');$('pageWrap').style.cursor='crosshair'});
+  canvas.addEventListener('click',e=>{
+    if(!settingPosition||!pdfDoc)return;
+    const r=canvas.getBoundingClientRect();
+    placement={page:currentPage,x:Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),y:Math.min(1,Math.max(0,1-(e.clientY-r.top)/r.height))};
+    settingPosition=false;$('pageWrap').style.cursor='default';showMarker();saveSettings();updateButtons();status(`Position saved for page ${currentPage}.`);
+  });
+  $('clearPosition').addEventListener('click',()=>{placement=null;$('marker').style.display='none';saveSettings();updateButtons();status('Position cleared and saved.')});
+  let transliterationDraft='';
+  let convertedWords=[];
+  let conversionBusy=false;
+  $('scriptMode').addEventListener('change',()=>{
+    transliterationRequest++;
+    transliterationDraft=$('investorName').value;
+    convertedWords=[];
+    updateLanguageHelp();saveSettings();updateButtons();
+  });
+  $('investorName').addEventListener('input',async(e)=>{
+    const input=$('investorName');
+    showMarker();updateButtons();
+    if($('scriptMode').value!=='gu-translit')return;
+    // Convert completed words on Space so typing can continue naturally in the same field.
+    const value=input.value;
+    if(value.endsWith(' ') && !conversionBusy){
+      const trimmed=value.slice(0,-1);
+      const lastSpace=trimmed.lastIndexOf(' ');
+      const prefix=trimmed.slice(0,lastSpace+1);
+      const word=trimmed.slice(lastSpace+1);
+      if(!word.trim())return;
+      const req=++transliterationRequest;
+      conversionBusy=true;
+      try{
+        const converted=await toGujarati(word);
+        if(req===transliterationRequest && $('scriptMode').value==='gu-translit'){
+          input.value=prefix+converted+' ';
+          input.setSelectionRange(input.value.length,input.value.length);
+          $('languageHelp').textContent='Converted to Gujarati: '+converted+'. Continue typing the next word in English and press Space.';
+          showMarker();updateButtons();
+        }
+      }catch(err){
+        $('languageHelp').textContent='Gujarati conversion failed. Check the connection or paste Gujarati text directly.';
+      }finally{conversionBusy=false}
+    }
+  });
+  ['fontSize','fontColor','fontWeight'].forEach(id=>$(id).addEventListener('input',()=>{showMarker();saveSettings();updateButtons()}));
+  async function buildPersonalizedPdf(){
+    let name=$('investorName').value.trim();
+    if(!name||!originalBytes||!placement)throw new Error('Upload a PDF, enter a name, and set its position first.');
+    const mode=$('scriptMode').value;
+    // Convert any final uncommitted English word before exporting.
+    if(mode==='gu-translit' && /[A-Za-z]$/.test(name)){
+      exportStatus('Converting final word to Gujarati…');
+      const lastSpace=name.lastIndexOf(' ');
+      const prefix=name.slice(0,lastSpace+1);
+      const lastWord=name.slice(lastSpace+1);
+      name=prefix+await toGujarati(lastWord);
+      $('investorName').value=name;
+      showMarker();
+    }
+    const {PDFDocument,StandardFonts,rgb}=PDFLib;
+    const out=await PDFDocument.load(originalBytes.slice(0));
+    const page=out.getPages()[placement.page-1];
+    const weight=$('fontWeight').value;
+    const hex=$('fontColor').value;
+    const color=rgb(parseInt(hex.slice(1,3),16)/255,parseInt(hex.slice(3,5),16)/255,parseInt(hex.slice(5,7),16)/255);
+    const size=Math.max(6,Math.min(60,Number($('fontSize').value)||18));
+    const x=placement.x*page.getWidth(), y=placement.y*page.getHeight();
+    if(mode==='english'){
+      const font=await out.embedFont(weight==='bold'?StandardFonts.HelveticaBold:StandardFonts.Helvetica);
+      page.drawText(name,{x,y,size,font,color});
+    }else{
+      const rendered=await embedGujaratiTextAsImage(out,name,size,hex);
+      page.drawImage(rendered.image,{x,y:y-size*0.35,width:rendered.width,height:rendered.height});
+    }
+    const bytes=await out.save();
+    const blob=new Blob([bytes],{type:'application/pdf'});
+    const safe=name.normalize('NFKD').replace(/[^a-zA-Z0-9_-]+/g,'_').replace(/^_+|_+$/g,'')||'Investor';
+    return {blob,name,filename:`Investment_Proposal_${safe}.pdf`};
+  }
+  function recordExport(name,filename){
+    exports.unshift({name,filename,time:new Date().toLocaleString()});
+    renderHistory();
+  }
+  function downloadBlob(blob,filename){
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }
+  $('generate').addEventListener('click',async()=>{
+    try{
+      $('generate').disabled=true;$('share').disabled=true;exportStatus('Generating PDF…');
+      const result=await buildPersonalizedPdf();
+      latestBlob=result.blob;latestName=result.filename;
+      downloadBlob(latestBlob,latestName);
+      recordExport(result.name,result.filename);
+      exportStatus('PDF generated and download started.');
+    }catch(err){console.error(err);exportStatus(err&&err.message?err.message:'Could not generate PDF. Check that the file is not encrypted or damaged.')}
+    finally{updateButtons()}
+  });
+  function renderHistory(){
+    $('exportCount').textContent=`${exports.length} export${exports.length===1?'':'s'}`;
+    if(!exports.length){$('historyList').textContent='Your generated files will appear here while this page stays open.';return}
+    $('historyList').innerHTML='';
+    exports.forEach(item=>{
+      const div=document.createElement('div');div.className='history-item';
+      const left=document.createElement('div');const strong=document.createElement('strong');strong.textContent=item.name;
+      const sub=document.createElement('div');sub.textContent=item.filename;sub.style.color='var(--muted)';sub.style.wordBreak='break-word';
+      const time=document.createElement('span');time.textContent=item.time;
+      left.append(strong,sub,time);div.append(left);$('historyList').appendChild(div);
+    });
+  }
+  $('share').addEventListener('click',async()=>{
+    // Build the PDF in memory and open the native share sheet directly; do not download first.
+    try{
+      $('share').disabled=true;$('generate').disabled=true;
+      exportStatus('Preparing PDF for sharing…');
+      const result=await buildPersonalizedPdf();
+      latestBlob=result.blob;latestName=result.filename;
+      const file=new File([latestBlob],latestName,{type:'application/pdf'});
+      if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({files:[file],title:latestName,text:'Personalized investment proposal'});
+        recordExport(result.name,result.filename);
+        exportStatus('Share menu opened. Choose WhatsApp, Mail, or another available app.');
+      }else{
+        // Do not silently download: explain browser limitation and offer a deliberate fallback.
+        exportStatus('Direct file sharing is not supported by this browser. Use “Generate & download PDF”, then attach the file to WhatsApp or email.');
+      }
+    }catch(e){
+      if(e.name==='AbortError')exportStatus('Sharing cancelled.');
+      else {console.error(e);exportStatus(e&&e.message?e.message:'Could not prepare the PDF for sharing.')}
+    }finally{updateButtons()}
+  });
+  window.addEventListener('resize',()=>{if(pdfDoc)renderPage(currentPage)});
+  updateButtons();
+})();
+</script>
+</body>
+</html>
