@@ -245,7 +245,7 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
     if(!placement||placement.page!==currentPage){$('marker').style.display='none';return}
     const rect=canvas.getBoundingClientRect();
     const x=placement.x*rect.width, y=(1-placement.y)*rect.height;
-    const marker=$('marker');marker.textContent=$('investorName').value.trim()||'Investor Name';
+    const marker=$('marker');marker.textContent=$('investorName').value.trim()||'Name';
     marker.style.left=x+'px';marker.style.top=y+'px';marker.style.display='block';
     marker.style.fontSize=Math.max(10,Number($('fontSize').value)||18)+'px';
     marker.style.color=$('fontColor').value;
@@ -423,7 +423,7 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
       latestBlob=result.blob;latestName=result.filename;
       const file=new File([latestBlob],latestName,{type:'application/pdf'});
       if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
-        await navigator.share({files:[file],title:latestName,text:'Personalized investment proposal'});
+        await navigator.share({files:[file],title:latestName,text:''});
         recordExport(result.name,result.filename);
         exportStatus('Share menu opened. Choose WhatsApp, Mail, or another available app.');
       }else{
