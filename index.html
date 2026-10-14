@@ -248,8 +248,10 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
     const x=placement.x*rect.width, y=(1-placement.y)*rect.height;
     const marker=$('marker');
     marker.textContent=$('investorName').value.trim()||'Name';
-    marker.style.left=x+'px';
-    marker.style.top=y+'px';
+    const wrapRect=$('pageWrap').getBoundingClientRect();
+    marker.style.left=(rect.left-wrapRect.left+x)+'px';
+    marker.style.top=(rect.top-wrapRect.top+y)+'px';
+    marker.style.fontFamily='Arial, Helvetica, sans-serif';
     marker.style.display='block';
     // Match the PDF preview zoom: PDF font size is in points and the canvas is in CSS pixels.
     // canvas.width is the backing-store size, so use its CSS dimensions and the PDF page width.
@@ -370,12 +372,19 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
     const hex=$('fontColor').value;
     const color=rgb(parseInt(hex.slice(1,3),16)/255,parseInt(hex.slice(3,5),16)/255,parseInt(hex.slice(5,7),16)/255);
     const size=Math.max(6,Math.min(60,Number($('fontSize').value)||18));
-    const x=Math.max(0,Math.min(page.getWidth()-1,placement.x*page.getWidth()));
-    // placement.y is measured from the top in the preview, converted to PDF's bottom-left origin.
-    // Align the exported text/image to the same top edge as the preview marker.
-    const anchorY=placement.y*page.getHeight();
+    // Convert the normalized preview position through PDF.js instead of multiplying
+    // by pdf-lib page dimensions. This keeps the same position on mobile/desktop and
+    // also respects PDFs with rotated pages or non-default crop boxes.
+    const previewPage=await pdfDoc.getPage(Number(placement.page));
+    const pdfViewport=previewPage.getViewport({scale:1});
+    const previewPointX=placement.x*pdfViewport.width;
+    const previewPointY=(1-placement.y)*pdfViewport.height;
+    const convertedPoint=pdfViewport.convertToPdfPoint(previewPointX,previewPointY);
+    const x=Math.max(0,Math.min(page.getWidth()-1,convertedPoint[0]));
+    const anchorY=convertedPoint[1];
     if(mode==='english'){
-      const font=await out.embedFont(weight==='bold'?StandardFonts.HelveticaBold:StandardFonts.Helvetica);
+      const useBold=weight==='bold'||weight==='semibold';
+      const font=await out.embedFont(useBold?StandardFonts.HelveticaBold:StandardFonts.Helvetica);
       const y=Math.max(0,Math.min(page.getHeight()-size,anchorY-size*0.82));
       page.drawText(name,{x,y,size,font,color});
     }else{
@@ -437,7 +446,7 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
 	) {
 	await navigator.share({
 		files: [file],
-		title: ''
+		title: latestName
 	});
 	
 	recordExport(result.name, result.filename);
