@@ -46,7 +46,7 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
 </style>
 </head>
 <body>
-<header><div class="brand">PDF <span>Personalizer</span></div></header>
+<header><div class="brand">PDF <span>Personalizer</span></div><div class="pill">Static browser tool</div></header>
 <main>
   <section class="intro"><h1>Personalize your PDF</h1><p>Upload a PDF, choose where the investor name should appear, then export a separate copy.</p></section>
   <div class="layout">
@@ -429,7 +429,7 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
 	) {
 	await navigator.share({
 		files: [file],
-		title: latestName
+		title: ''
 	});
 	
 	recordExport(result.name, result.filename);
