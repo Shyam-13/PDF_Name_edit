@@ -26,7 +26,7 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
 .preview-shell{background:#edf1f7;border-radius:12px;padding:clamp(6px,1.5vw,14px);min-height:280px;display:flex;justify-content:center;align-items:flex-start;overflow:auto;overscroll-behavior:contain;width:100%}
 #pageWrap{position:relative;display:none;line-height:0;box-shadow:0 3px 12px #14213d22;background:white;max-width:100%;flex:0 0 auto}
 #pdfCanvas{display:block;max-width:100%;height:auto}
-#marker{position:absolute;display:none;line-height:1.2;border:1px dashed #315efb;background:#315efb20;color:#173bbd;padding:0;white-space:nowrap;transform:none;pointer-events:auto;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;z-index:5;max-width:100%;overflow:hidden}
+#marker{position:absolute;display:none;line-height:1;border:0;outline:1px dashed #315efb;background:#315efb12;color:#173bbd;padding:0;margin:0;white-space:pre; font-family:Arial,Helvetica,sans-serif;transform:none;pointer-events:auto;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;z-index:5;max-width:100%;overflow:hidden}
 .empty{color:var(--muted);text-align:center;padding:clamp(28px,5vw,48px) 12px;font-size:14px}.status{font-size:12px;color:var(--muted);margin-top:12px;min-height:18px;overflow-wrap:anywhere}.history{margin-top:18px}.history-item{border-top:1px solid var(--line);padding:11px 0;display:flex;justify-content:space-between;gap:10px;font-size:13px}.history-item span{color:var(--muted);display:block}.notice{font-size:12px;background:#fff8e7;border:1px solid #f5df9b;padding:10px;border-radius:9px;color:#765b15;margin-top:14px}footer{text-align:center;padding:22px 14px;color:var(--muted);font-size:12px}
 @media(max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}aside{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}.history{margin-top:0}}
 @media(max-width:600px){header{padding:13px 14px;min-height:60px}.brand{font-size:18px}.pill{font-size:10px;padding:5px 7px}main{margin:18px auto;padding:0 10px}.intro{padding:0 3px;margin-bottom:15px}.intro h1{font-size:24px}.intro p{font-size:14px}.layout{gap:12px}.card{padding:13px;border-radius:13px}.card h2{margin-bottom:12px}.upload{padding:12px 10px}.upload p{font-size:12px}.toolbar{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:5px}.toolbar button{font-size:12px;padding:9px 6px;min-height:40px}.pageinfo{font-size:12px}.preview-shell{min-height:180px;padding:5px}.row{gap:8px}.row button{padding:10px 7px;font-size:13px}#generate,#share{font-size:14px}aside{grid-template-columns:1fr;gap:12px}.history{margin-top:0}.empty{padding:32px 8px;font-size:13px}footer{padding:18px 12px}}
@@ -46,7 +46,7 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
 </style>
 </head>
 <body>
-<header><div class="brand">PDF <span>Personalizer</span></div></header>
+<header><div class="brand">PDF <span>Personalizer</span></div><div class="pill">Static browser tool</div></header>
 <main>
   <section class="intro"><h1>Personalize your PDF</h1><p>Upload a PDF, choose where the investor name should appear, then export a separate copy.</p></section>
   <div class="layout">
@@ -222,6 +222,7 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
       if(sequence!==renderSequence)return;
       const shell=$('pageWrap').parentElement;
       const base=page.getViewport({scale:1});
+      canvas.dataset.pageWidthPt=String(base.width);
       const maxWidth=Math.max(240,Math.min(shell.clientWidth-18,780));
       const scale=Math.min(maxWidth/base.width,1.6);
       const viewport=page.getViewport({scale});
@@ -245,9 +246,16 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
     if(!placement||placement.page!==currentPage){$('marker').style.display='none';return}
     const rect=canvas.getBoundingClientRect();
     const x=placement.x*rect.width, y=(1-placement.y)*rect.height;
-    const marker=$('marker');marker.textContent=$('investorName').value.trim()||'Name';
-    marker.style.left=x+'px';marker.style.top=y+'px';marker.style.display='block';
-    marker.style.fontSize=(Math.max(6,Math.min(60,Number($('fontSize').value)||18))*96/72)+'px';
+    const marker=$('marker');
+    marker.textContent=$('investorName').value.trim()||'Name';
+    marker.style.left=x+'px';
+    marker.style.top=y+'px';
+    marker.style.display='block';
+    // Match the PDF preview zoom: PDF font size is in points and the canvas is in CSS pixels.
+    // canvas.width is the backing-store size, so use its CSS dimensions and the PDF page width.
+    const pageWidthPt=Number(canvas.dataset.pageWidthPt)||0;
+    const scale=pageWidthPt>0 ? rect.width/pageWidthPt : 1;
+    marker.style.fontSize=(Math.max(6,Math.min(60,Number($('fontSize').value)||18))*scale)+'px';
     marker.style.color=$('fontColor').value;
     marker.style.fontWeight=$('fontWeight').value==='regular'?'400':$('fontWeight').value==='semibold'?'600':'700';
   }
@@ -368,7 +376,7 @@ button{border:0;border-radius:9px;padding:11px 13px;font-weight:700;cursor:point
     const anchorY=placement.y*page.getHeight();
     if(mode==='english'){
       const font=await out.embedFont(weight==='bold'?StandardFonts.HelveticaBold:StandardFonts.Helvetica);
-      const y=Math.max(0,Math.min(page.getHeight()-size,anchorY-size*0.8));
+      const y=Math.max(0,Math.min(page.getHeight()-size,anchorY-size*0.82));
       page.drawText(name,{x,y,size,font,color});
     }else{
       const rendered=await embedGujaratiTextAsImage(out,name,size,hex);
